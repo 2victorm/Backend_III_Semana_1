@@ -53,7 +53,12 @@ public class InteresProcessor implements ItemProcessor<Interes, InteresCalculado
     }
 
     @Override
-    public InteresCalculado process(Interes interes) {
+public InteresCalculado process(Interes interes) throws Exception {
+
+    System.out.println(
+        "Procesando en hilo: " + Thread.currentThread().getName()
+    );
+
 
         String id = String.valueOf(interes.getCuentaId());
 
