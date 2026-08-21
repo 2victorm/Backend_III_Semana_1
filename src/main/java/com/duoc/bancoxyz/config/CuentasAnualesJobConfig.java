@@ -3,6 +3,7 @@ package com.duoc.bancoxyz.config;
 import javax.sql.DataSource;
 
 import org.springframework.batch.core.job.Job;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
@@ -14,11 +15,9 @@ import org.springframework.batch.infrastructure.item.database.builder.JdbcBatchI
 import org.springframework.batch.infrastructure.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
 import org.springframework.batch.infrastructure.item.file.builder.FlatFileItemReaderBuilder;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.duoc.bancoxyz.exception.ValidacionDatosException;
@@ -84,15 +83,13 @@ public class CuentasAnualesJobConfig {
             PlatformTransactionManager transactionManager,
             FlatFileItemReader<CuentaAnual> cuentaAnualReader,
             CuentaAnualProcessor cuentaAnualProcessor,
-            JdbcBatchItemWriter<CuentaAnual> cuentaAnualWriter,
-            AsyncTaskExecutor taskExecutor) {
+            JdbcBatchItemWriter<CuentaAnual> cuentaAnualWriter) {
 
         return new ChunkOrientedStepBuilder<CuentaAnual, CuentaAnual>(
-                "cargarCuentasAnualesStep", jobRepository, 5)
+                "cargarCuentasAnualesStep", jobRepository, 10)
                 .reader(cuentaAnualReader)
                 .processor(cuentaAnualProcessor)
                 .writer(cuentaAnualWriter)
-                .taskExecutor(taskExecutor)
                 .transactionManager(transactionManager)
                 .faultTolerant()
                 .skip(ValidacionDatosException.class)
@@ -158,7 +155,7 @@ public class CuentasAnualesJobConfig {
             JdbcBatchItemWriter<EstadoAnual> estadoAnualWriter) {
 
         return new ChunkOrientedStepBuilder<EstadoAnual, EstadoAnual>(
-                "generarEstadosAnualesStep", jobRepository, 5)
+                "generarEstadosAnualesStep", jobRepository, 10)
                 .reader(estadoAnualReader)
                 .writer(estadoAnualWriter)
                 .transactionManager(transactionManager)
