@@ -3,21 +3,22 @@ package com.duoc.bancoxyz.config;
 import javax.sql.DataSource;
 
 import org.springframework.batch.core.job.Job;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.ChunkOrientedStepBuilder;
 import org.springframework.batch.infrastructure.item.database.BeanPropertyItemSqlParameterSourceProvider;
-import org.springframework.batch.infrastructure.item.database.JdbcCursorItemReader;
 import org.springframework.batch.infrastructure.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.infrastructure.item.database.JdbcCursorItemReader;
 import org.springframework.batch.infrastructure.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.infrastructure.item.database.builder.JdbcCursorItemReaderBuilder;
 import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
 import org.springframework.batch.infrastructure.item.file.builder.FlatFileItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.task.AsyncTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 import com.duoc.bancoxyz.exception.ValidacionDatosException;
@@ -26,6 +27,7 @@ import com.duoc.bancoxyz.model.ResumenDiario;
 import com.duoc.bancoxyz.model.Transaccion;
 import com.duoc.bancoxyz.processor.TransaccionProcessor;
 import com.duoc.bancoxyz.util.ParseadorFechas;
+
 
 /**
  * 
@@ -83,13 +85,15 @@ public class TransaccionesJobConfig {
             PlatformTransactionManager transactionManager,
             FlatFileItemReader<Transaccion> transaccionReader,
             TransaccionProcessor transaccionProcessor,
-            JdbcBatchItemWriter<Transaccion> transaccionWriter) {
+            JdbcBatchItemWriter<Transaccion> transaccionWriter,
+            AsyncTaskExecutor taskExecutor) {
 
         return new ChunkOrientedStepBuilder<Transaccion, Transaccion>(
-                "cargarTransaccionesStep", jobRepository, 10)
+                "cargarTransaccionesStep", jobRepository, 5)
                 .reader(transaccionReader)
                 .processor(transaccionProcessor)
                 .writer(transaccionWriter)
+                .taskExecutor(taskExecutor)
                 .transactionManager(transactionManager)
                 .faultTolerant()
                 .skip(ValidacionDatosException.class)
@@ -149,7 +153,7 @@ public class TransaccionesJobConfig {
             JdbcBatchItemWriter<ResumenDiario> resumenWriter) {
 
         return new ChunkOrientedStepBuilder<ResumenDiario, ResumenDiario>(
-                "resumenTransaccionesStep", jobRepository, 10)
+                "resumenTransaccionesStep", jobRepository, 5)
                 .reader(resumenReader)
                 .writer(resumenWriter)
                 .transactionManager(transactionManager)
