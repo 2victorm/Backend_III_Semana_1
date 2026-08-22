@@ -11,21 +11,8 @@
 	<groupId>com.duoc</groupId>
 	<artifactId>banco-xyz-batch</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
-	<url/>
-	<licenses>
-		<license/>
-	</licenses>
-	<developers>
-		<developer/>
-	</developers>
-	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+	<name>banco-xyz-batch</name>
+	<description>Migracion de procesos batch legacy del Banco XYZ a Spring Batch (PBY2203, Exp1)</description>
 	<properties>
 		<java.version>21</java.version>
 	</properties>
