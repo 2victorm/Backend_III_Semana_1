@@ -1,8 +1,7 @@
 package com.duoc.bancoxyz.processor;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
@@ -25,7 +24,8 @@ public class TransaccionProcessor implements ItemProcessor<Transaccion, Transacc
 
     private final RechazoRepository rechazoRepository;
 
-    private final Set<String> huellasVistas = new HashSet<>();
+    // SEMANA 2: Esta semana el step pasa a correr con 3 hilos en paralelo
+    private final ConcurrentHashMap<String, String> huellaAId = new ConcurrentHashMap<>();
 
     public TransaccionProcessor(RechazoRepository rechazoRepository) {
         this.rechazoRepository = rechazoRepository;
@@ -36,12 +36,11 @@ public class TransaccionProcessor implements ItemProcessor<Transaccion, Transacc
 
         String id = String.valueOf(transaccion.getId());
 
-        // Validacion fecha
         if (transaccion.getFecha() == null) {
             throw new ValidacionDatosException(
                     "Transaccion " + id + ": la fecha no pudo interpretarse");
         }
-        // Validacion montos
+
         if (transaccion.getMonto() == null
                 || transaccion.getMonto().compareTo(BigDecimal.ZERO) <= 0) {
 
@@ -49,10 +48,9 @@ public class TransaccionProcessor implements ItemProcessor<Transaccion, Transacc
                     "Transacción descartada: ID " + transaccion.getId()
                             + " - monto inválido: " + transaccion.getMonto(),
                     transaccion.toString());
-
             return null;
         }
-        // Validacion de tipo (credito, debito)
+
         String tipo = transaccion.getTipo() == null
                 ? ""
                 : transaccion.getTipo().trim().toUpperCase();
@@ -66,10 +64,12 @@ public class TransaccionProcessor implements ItemProcessor<Transaccion, Transacc
 
         transaccion.setTipo(tipo);
 
-        // Verificacion de duplicados
+        // SEMANA 2: intenta guardar la huella con x id,
+        // y devuelve quien la tenia guardada ANTES (o null si nadie la tenia).
         String huella = transaccion.getFecha() + "|" + transaccion.getMonto() + "|" + tipo;
+        String idQueLaReclamoPrimero = huellaAId.putIfAbsent(huella, id);
 
-        if (!huellasVistas.add(huella)) {
+        if (idQueLaReclamoPrimero != null && !idQueLaReclamoPrimero.equals(id)) {
 
             rechazoRepository.registrar(JOB, ARCHIVO, id,
                     "Registro duplicado (misma fecha, monto y tipo)", transaccion.toString());

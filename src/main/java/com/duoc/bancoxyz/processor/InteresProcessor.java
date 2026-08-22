@@ -2,8 +2,7 @@ package com.duoc.bancoxyz.processor;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,7 +36,7 @@ public class InteresProcessor implements ItemProcessor<Interes, InteresCalculado
     private final int edadMinima;
     private final int edadMaxima;
 
-    private final Set<String> huellasVistas = new HashSet<>();
+    private final ConcurrentHashMap<String, String> huellaAId = new ConcurrentHashMap<>();
 
     public InteresProcessor(RechazoRepository rechazoRepository,
             @Value("${banco.tasa.ahorro}") BigDecimal tasaAhorro,
@@ -53,16 +52,10 @@ public class InteresProcessor implements ItemProcessor<Interes, InteresCalculado
     }
 
     @Override
-public InteresCalculado process(Interes interes) throws Exception {
-
-    System.out.println(
-        "Procesando en hilo: " + Thread.currentThread().getName()
-    );
-
+    public InteresCalculado process(Interes interes) {
 
         String id = String.valueOf(interes.getCuentaId());
 
-        // Validacion de saldos
         if (interes.getSaldo() == null
                 || interes.getSaldo().compareTo(BigDecimal.ZERO) <= 0) {
 
@@ -71,7 +64,6 @@ public InteresCalculado process(Interes interes) throws Exception {
             return null;
         }
 
-        // Validacion de edades
         if (interes.getEdad() == null
                 || interes.getEdad() < edadMinima
                 || interes.getEdad() > edadMaxima) {
@@ -82,7 +74,6 @@ public InteresCalculado process(Interes interes) throws Exception {
             return null;
         }
 
-        // Validacion de tipo (ahorro, prestamo)
         String tipo = interes.getTipo() == null
                 ? ""
                 : interes.getTipo().trim().toLowerCase();
@@ -99,18 +90,17 @@ public InteresCalculado process(Interes interes) throws Exception {
             return null;
         }
 
-        // Verificacion de duplicados
         String huella = interes.getNombre() + "|" + interes.getSaldo()
                 + "|" + interes.getEdad() + "|" + tipo;
+        String idQueLaReclamoPrimero = huellaAId.putIfAbsent(huella, id);
 
-        if (!huellasVistas.add(huella)) {
+        if (idQueLaReclamoPrimero != null && !idQueLaReclamoPrimero.equals(id)) {
 
             rechazoRepository.registrar(JOB, ARCHIVO, id,
                     "Registro duplicado (mismo titular, saldo, edad y tipo)", interes.toString());
             return null;
         }
 
-        // Calculo: interes = saldo * tasa, redondeado a 2 decimales
         BigDecimal interesMensual = interes.getSaldo()
                 .multiply(tasa)
                 .setScale(2, RoundingMode.HALF_UP);
